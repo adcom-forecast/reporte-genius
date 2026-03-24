@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reporte Marzo 2026 — Performance + Inversión</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #F4F2EC;
+    --surface: #FFFFFF;
+    --ink: #18180F;
+    --ink-muted: #6B6A5E;
+    --ink-faint: #A9A89E;
+    --accent: #1B4FD8;
+    --accent-light: #EEF2FF;
+    --gold: #B8860B;
+    --gold-bg: #FDF8EC;
+    --red: #C0392B;
+    --red-bg: #FEF2F2;
+    --green: #166534;
+    --green-bg: #DCFCE7;
+    --border: #E4E2D9;
+    --border-strong: #CDCBC0;
+    --r: 12px;
+    --r-sm: 8px;
+  }
+  body { background: var(--bg); color: var(--ink); font-family: 'DM Sans', sans-serif; font-size: 15px; line-height: 1.6; }
+
+  /* HEADER */
+  .header { background: var(--ink); color: #fff; padding: 52px 60px 44px; position: relative; overflow: hidden; }
+  .header::before { content:''; position:absolute; right:-60px; top:-60px; width:360px; height:360px; border-radius:50%; border:55px solid rgba(255,255,255,0.04); }
+  .header::after { content:''; position:absolute; right:120px; bottom:-100px; width:220px; height:220px; border-radius:50%; border:35px solid rgba(255,255,255,0.03); }
+  .eyebrow { font-size:11px; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; color:#C9A84C; margin-bottom:14px; }
+  .header h1 { font-family:'DM Serif Display',serif; font-size:46px; font-weight:400; line-height:1.1; letter-spacing:-0.02em; margin-bottom:10px; }
+  .header-sub { font-size:14px; color:rgba(255,255,255,0.5); font-weight:300; }
+  .header-kpis { margin-top:40px; display:grid; grid-template-columns:repeat(5,auto); gap:0; width:fit-content; border:1px solid rgba(255,255,255,0.1); border-radius:10px; overflow:hidden; }
+  .hkpi { padding:16px 28px; border-right:1px solid rgba(255,255,255,0.08); }
+  .hkpi:last-child { border-right:none; }
+  .hkpi-label { font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:rgba(255,255,255,0.38); margin-bottom:4px; }
+  .hkpi-val { font-size:22px; font-weight:500; color:#fff; }
+
+  /* MAIN */
+  .main { max-width:980px; margin:0 auto; padding:52px 40px 80px; }
+  .section-title { font-family:'DM Serif Display',serif; font-size:24px; font-weight:400; margin-bottom:22px; padding-bottom:14px; border-bottom:1px solid var(--border-strong); }
+
+  /* WEEKLY SUMMARY CARDS */
+  .week-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:48px; }
+  .wcard { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:22px 18px 18px; position:relative; }
+  .wcard.best { border-color:#1B4FD8; border-width:2px; }
+  .wcard .best-badge { position:absolute; top:-10px; left:18px; background:var(--accent); color:#fff; font-size:10px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; padding:3px 10px; border-radius:20px; }
+  .wcard-label { font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-faint); margin-bottom:3px; }
+  .wcard-dates { font-size:11px; color:var(--ink-muted); margin-bottom:14px; }
+  .wcard-row { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
+  .wcard-metric { font-size:11px; color:var(--ink-muted); }
+  .wcard-val { font-size:15px; font-weight:500; color:var(--ink); }
+  .wcard-big { font-family:'DM Serif Display',serif; font-size:38px; line-height:1; color:var(--ink); margin-bottom:6px; }
+  .wcard-inv { font-size:13px; color:var(--ink-muted); margin-bottom:12px; }
+  .divider { height:1px; background:var(--border); margin:12px 0; }
+  .cpd-row { display:flex; justify-content:space-between; align-items:center; }
+  .cpd-label { font-size:11px; color:var(--ink-faint); }
+  .cpd-val { font-size:14px; font-weight:600; }
+  .cpd-good { color:var(--green); }
+  .cpd-warn { color:var(--gold); }
+  .badge { display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px; margin-top:10px; }
+  .badge-up { background:var(--green-bg); color:var(--green); }
+  .badge-base { background:var(--border); color:var(--ink-muted); }
+  .badge-partial { background:var(--gold-bg); color:var(--gold); }
+
+  /* CHARTS */
+  .charts-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:48px; }
+  .chart-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:26px; }
+  .chart-card h3 { font-size:11px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-muted); margin-bottom:16px; }
+  .legend { display:flex; gap:16px; margin-bottom:14px; flex-wrap:wrap; }
+  .legend-item { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ink-muted); }
+  .ldot { width:10px; height:10px; border-radius:2px; flex-shrink:0; }
+
+  /* BIG CHART */
+  .big-chart-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:28px; margin-bottom:48px; }
+  .big-chart-card h3 { font-size:11px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-muted); margin-bottom:20px; }
+
+  /* TABLE */
+  .table-wrap { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); overflow:hidden; margin-bottom:48px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  thead th { background:#F7F6F1; font-size:10px; font-weight:600; letter-spacing:0.09em; text-transform:uppercase; color:var(--ink-muted); padding:13px 18px; text-align:left; border-bottom:1px solid var(--border); }
+  thead th.right { text-align:right; }
+  tbody tr { border-bottom:1px solid var(--border); transition:background .15s; }
+  tbody tr:last-child { border-bottom:none; }
+  tbody tr:hover { background:#FAFAF6; }
+  td { padding:13px 18px; color:var(--ink); }
+  td.right { text-align:right; }
+  td.muted { color:var(--ink-muted); }
+  td.grow { color:var(--green); font-weight:600; }
+  td.partial { color:var(--gold); }
+  td.highlight { font-weight:600; color:var(--accent); }
+  .bar-wrap { display:flex; align-items:center; gap:8px; justify-content:flex-end; }
+  .bar-bg { width:60px; height:5px; background:var(--border); border-radius:3px; overflow:hidden; }
+  .bar-fill { height:100%; border-radius:3px; }
+  .bar-blue { background:var(--accent); }
+  .bar-gold { background:#C9A84C; }
+
+  /* INSIGHT CARDS */
+  .insights { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:48px; }
+  .ic { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:22px; }
+  .ic .icon { width:34px; height:34px; border-radius:var(--r-sm); display:flex; align-items:center; justify-content:center; font-size:16px; margin-bottom:12px; }
+  .ic h4 { font-size:13px; font-weight:600; color:var(--ink); margin-bottom:5px; }
+  .ic p { font-size:12px; color:var(--ink-muted); line-height:1.55; }
+  .ic .ic-stat { font-family:'DM Serif Display',serif; font-size:28px; color:var(--accent); margin:8px 0 2px; }
+  .ic .ic-stat-label { font-size:11px; color:var(--ink-faint); }
+  .icon-blue { background:var(--accent-light); }
+  .icon-green { background:var(--green-bg); }
+  .icon-gold { background:var(--gold-bg); }
+  .icon-red { background:var(--red-bg); }
+
+  /* ALERT CARD */
+  .alert-card { background:var(--gold-bg); border:1px solid #E2C97A; border-radius:var(--r); padding:20px 24px; margin-bottom:48px; display:flex; gap:16px; align-items:flex-start; }
+  .alert-icon { font-size:20px; flex-shrink:0; margin-top:2px; }
+  .alert-card h4 { font-size:13px; font-weight:600; color:#7C5A00; margin-bottom:4px; }
+  .alert-card p { font-size:12px; color:#92700A; line-height:1.5; }
+
+  /* FOOTER */
+  .footer { border-top:1px solid var(--border); padding-top:22px; font-size:11px; color:var(--ink-faint); display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+
+  @media(max-width:700px) {
+    .header { padding:36px 24px 32px; }
+    .header h1 { font-size:32px; }
+    .header-kpis { grid-template-columns:1fr 1fr; width:100%; }
+    .hkpi { border-right:none; border-bottom:1px solid rgba(255,255,255,0.08); }
+    .main { padding:32px 20px 60px; }
+    .week-grid { grid-template-columns:1fr 1fr; }
+    .charts-grid { grid-template-columns:1fr; }
+    .insights { grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="eyebrow">Performance · Inversión · ROI</div>
+  <h1>Reporte Marzo 2026<br><em>Pauta + Resultados</em></h1>
+  <div class="header-sub">Análisis semanal · Primeros depósitos · Costo por depósito · Conversión</div>
+  <div class="header-kpis">
+    <div class="hkpi">
+      <div class="hkpi-label">Inversión total</div>
+      <div class="hkpi-val">$19.121</div>
+    </div>
+    <div class="hkpi">
+      <div class="hkpi-label">1ros depósitos</div>
+      <div class="hkpi-val">183</div>
+    </div>
+    <div class="hkpi">
+      <div class="hkpi-label">CPD promedio</div>
+      <div class="hkpi-val">$104,49</div>
+    </div>
+    <div class="hkpi">
+      <div class="hkpi-label">Registros totales</div>
+      <div class="hkpi-val">1.429</div>
+    </div>
+    <div class="hkpi">
+      <div class="hkpi-label">Datos al</div>
+      <div class="hkpi-val">23 mar 2026</div>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- Weekly cards -->
+  <p class="section-title">Semana a semana</p>
+  <div class="week-grid">
+
+    <div class="wcard">
+      <div class="wcard-label">Semana 1</div>
+      <div class="wcard-dates">01 – 07 mar</div>
+      <div class="wcard-big">50</div>
+      <div class="wcard-inv">Inversión: <strong>$4.159</strong></div>
+      <div class="divider"></div>
+      <div class="cpd-row">
+        <span class="cpd-label">Costo por dep.</span>
+        <span class="cpd-val cpd-warn">$83,19</span>
+      </div>
+      <div class="cpd-row" style="margin-top:4px">
+        <span class="cpd-label">Conv. reg→dep</span>
+        <span class="cpd-val">14,3%</span>
+      </div>
+      <br><span class="badge badge-base">Base de referencia</span>
+    </div>
+
+    <div class="wcard">
+      <div class="wcard-label">Semana 2</div>
+      <div class="wcard-dates">08 – 14 mar</div>
+      <div class="wcard-big">59</div>
+      <div class="wcard-inv">Inversión: <strong>$6.802</strong></div>
+      <div class="divider"></div>
+      <div class="cpd-row">
+        <span class="cpd-label">Costo por dep.</span>
+        <span class="cpd-val cpd-warn">$115,29</span>
+      </div>
+      <div class="cpd-row" style="margin-top:4px">
+        <span class="cpd-label">Conv. reg→dep</span>
+        <span class="cpd-val">11,5%</span>
+      </div>
+      <br><span class="badge badge-up">▲ +18% depósitos</span>
+    </div>
+
+    <div class="wcard best">
+      <div class="best-badge">Mejor semana</div>
+      <div class="wcard-label">Semana 3</div>
+      <div class="wcard-dates">15 – 21 mar</div>
+      <div class="wcard-big">66</div>
+      <div class="wcard-inv">Inversión: <strong>$6.359</strong></div>
+      <div class="divider"></div>
+      <div class="cpd-row">
+        <span class="cpd-label">Costo por dep.</span>
+        <span class="cpd-val cpd-good">$96,35</span>
+      </div>
+      <div class="cpd-row" style="margin-top:4px">
+        <span class="cpd-label">Conv. reg→dep</span>
+        <span class="cpd-val">15,0%</span>
+      </div>
+      <br><span class="badge badge-up">▲ +12% depósitos</span>
+    </div>
+
+    <div class="wcard">
+      <div class="wcard-label">Semana 4 ⚠</div>
+      <div class="wcard-dates">22 – 23 mar (parcial)</div>
+      <div class="wcard-big">9</div>
+      <div class="wcard-inv">Inversión: <strong>$1.842</strong></div>
+      <div class="divider"></div>
+      <div class="cpd-row">
+        <span class="cpd-label">Costo por dep.</span>
+        <span class="cpd-val cpd-warn">$204,64</span>
+      </div>
+      <div class="cpd-row" style="margin-top:4px">
+        <span class="cpd-label">Conv. reg→dep</span>
+        <span class="cpd-val">10,0%</span>
+      </div>
+      <br><span class="badge badge-partial">Solo 2 días</span>
+    </div>
+
+  </div>
+
+  <!-- Alert -->
+  <div class="alert-card">
+    <div class="alert-icon">⚠</div>
+    <div>
+      <h4>La inversión subió 64% de sem 1 a sem 2, pero el CPD también empeoró</h4>
+      <p>Al pasar de $4.159 a $6.802 de inversión (+63,5%), los primeros depósitos solo crecieron +18%. Esto elevó el costo por depósito de $83 a $115. La recuperación llegó en sem 3: con inversión similar a sem 2 ($6.359), se lograron más depósitos (66 vs 59) y mejor conversión (15% vs 11,5%), bajando el CPD a $96.</p>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <p class="section-title">Visualización comparativa</p>
+
+  <div class="big-chart-card">
+    <h3>Inversión semanal vs Primeros depósitos (sem 1–3 completas)</h3>
+    <div class="legend">
+      <div class="legend-item"><div class="ldot" style="background:#1B4FD8"></div>Inversión ($)</div>
+      <div class="legend-item"><div class="ldot" style="background:#16a34a; border-radius:50%"></div>1ros Depósitos</div>
+      <div class="legend-item"><div class="ldot" style="background:#C9A84C; border-radius:50%"></div>Costo por depósito ($)</div>
+    </div>
+    <div style="position:relative;height:260px;">
+      <canvas id="bigChart"></canvas>
+    </div>
+  </div>
+
+  <div class="charts-grid">
+    <div class="chart-card">
+      <h3>CPD semana a semana</h3>
+      <div style="position:relative;height:200px;">
+        <canvas id="cpdChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <h3>Inversión diaria (todo marzo)</h3>
+      <div style="position:relative;height:200px;">
+        <canvas id="dailyChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <p class="section-title">Tabla resumen</p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Semana</th>
+          <th>Días</th>
+          <th class="right">Inversión</th>
+          <th class="right">Registros</th>
+          <th class="right">1ros Dep.</th>
+          <th class="right">Conv. %</th>
+          <th class="right">CPD</th>
+          <th class="right">Δ CPD</th>
+          <th class="right">Δ Dep.</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Sem 1</strong> · 01–07 mar</td>
+          <td class="muted">7</td>
+          <td class="right">$4.159</td>
+          <td class="right">350</td>
+          <td class="right highlight">50</td>
+          <td class="right">
+            <div class="bar-wrap"><span>14,3%</span><div class="bar-bg"><div class="bar-fill bar-blue" style="width:57%"></div></div></div>
+          </td>
+          <td class="right">$83,19</td>
+          <td class="right muted">—</td>
+          <td class="right muted">Base</td>
+        </tr>
+        <tr>
+          <td><strong>Sem 2</strong> · 08–14 mar</td>
+          <td class="muted">7</td>
+          <td class="right">$6.802</td>
+          <td class="right">511</td>
+          <td class="right highlight">59</td>
+          <td class="right">
+            <div class="bar-wrap"><span>11,5%</span><div class="bar-bg"><div class="bar-fill bar-blue" style="width:46%"></div></div></div>
+          </td>
+          <td class="right" style="color:var(--red)">$115,29</td>
+          <td class="right" style="color:var(--red)">▲ +38,6%</td>
+          <td class="right grow">+18,0%</td>
+        </tr>
+        <tr>
+          <td><strong>Sem 3</strong> · 15–21 mar</td>
+          <td class="muted">7</td>
+          <td class="right">$6.359</td>
+          <td class="right">440</td>
+          <td class="right highlight">66</td>
+          <td class="right">
+            <div class="bar-wrap"><span>15,0%</span><div class="bar-bg"><div class="bar-fill bar-blue" style="width:60%"></div></div></div>
+          </td>
+          <td class="right cpd-good">$96,35</td>
+          <td class="right grow">▼ -16,4%</td>
+          <td class="right grow">+11,9%</td>
+        </tr>
+        <tr>
+          <td><strong>Sem 4 ⚠</strong> · 22–23 mar</td>
+          <td class="muted">2</td>
+          <td class="right">$1.842</td>
+          <td class="right">90</td>
+          <td class="right highlight">9</td>
+          <td class="right">
+            <div class="bar-wrap"><span>10,0%</span><div class="bar-bg"><div class="bar-fill bar-blue" style="width:40%"></div></div></div>
+          </td>
+          <td class="right partial">$204,64*</td>
+          <td class="right partial">Parcial</td>
+          <td class="right partial">Parcial</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Insights -->
+  <p class="section-title">Conclusiones clave</p>
+  <div class="insights">
+    <div class="ic">
+      <div class="icon icon-green">📈</div>
+      <h4>La pauta SÍ impacta positivamente los depósitos</h4>
+      <p>Las semanas con mayor inversión (sem 2 y 3) produjeron más primeros depósitos que la sem 1. La relación inversión→resultado es positiva y consistente.</p>
+      <div class="ic-stat">+32%</div>
+      <div class="ic-stat-label">crecimiento depósitos sem 1 → sem 3</div>
+    </div>
+    <div class="ic">
+      <div class="icon icon-blue">💡</div>
+      <h4>Sem 3: el punto óptimo hasta ahora</h4>
+      <p>Con inversión ligeramente menor que sem 2 ($6.359 vs $6.802), se obtuvieron más depósitos (66 vs 59) y mejor conversión (15% vs 11,5%). El CPD bajó de $115 a $96.</p>
+      <div class="ic-stat">$96,35</div>
+      <div class="ic-stat-label">mejor CPD de semanas completas</div>
+    </div>
+    <div class="ic">
+      <div class="icon icon-gold">⚡</div>
+      <h4>Sem 2: más inversión no garantizó mejor eficiencia</h4>
+      <p>El pico del 11/mar (171 registros) elevó el volumen pero diluyó la conversión. Mayor gasto no siempre equivale a menor CPD si la calidad del tráfico varía.</p>
+      <div class="ic-stat">$115,29</div>
+      <div class="ic-stat-label">CPD más alto de semanas completas</div>
+    </div>
+    <div class="ic">
+      <div class="icon icon-green">🎯</div>
+      <h4>Recomendación de pauta</h4>
+      <p>El rango de $6.000–$6.500 semanales parece el punto de mayor eficiencia. Mantener esa inversión con la segmentación de sem 3 puede consolidar el CPD por debajo de $100.</p>
+      <div class="ic-stat">~$6.300</div>
+      <div class="ic-stat-label">inversión semanal recomendada</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>* CPD sem 4 no comparable — solo 2 días de datos</span>
+    <span>Sem 2 incluye pico anómalo del 11/mar (171 registros en un día)</span>
+    <span>Generado el 24 de marzo de 2026</span>
+  </div>
+
+</div>
+
+<script>
+const weeks = ['Sem 1\n01–07 mar','Sem 2\n08–14 mar','Sem 3\n15–21 mar'];
+const inv =   [4159, 6802, 6359];
+const deps =  [50, 59, 66];
+const cpd =   [83.19, 115.29, 96.35];
+
+const tC = '#6B6A5E';
+const gC = 'rgba(0,0,0,0.06)';
+
+// Big combo chart
+new Chart(document.getElementById('bigChart'), {
+  data: {
+    labels: ['Sem 1  (01–07)', 'Sem 2  (08–14)', 'Sem 3  (15–21)'],
+    datasets: [
+      {
+        type:'bar', label:'Inversión ($)', data: inv,
+        backgroundColor:['#CBD5F8','#9DB4F5','#1B4FD8'],
+        borderRadius:6, barPercentage:0.5, yAxisID:'yInv', order:3
+      },
+      {
+        type:'line', label:'1ros Depósitos', data: deps,
+        borderColor:'#16a34a', backgroundColor:'rgba(22,163,74,0.08)',
+        pointBackgroundColor:'#16a34a', pointRadius:6, tension:0.35,
+        yAxisID:'yDep', order:1, fill:false
+      },
+      {
+        type:'line', label:'CPD ($)', data: cpd,
+        borderColor:'#C9A84C', backgroundColor:'transparent',
+        pointBackgroundColor:'#C9A84C', pointRadius:6, tension:0.35,
+        borderDash:[4,4], yAxisID:'yCPD', order:2
+      }
+    ]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false}, tooltip:{mode:'index'} },
+    scales:{
+      x:{ ticks:{color:tC, font:{size:11}}, grid:{color:gC} },
+      yInv:{ position:'left', ticks:{color:'#9DB4F5', font:{size:11}, callback:v=>'$'+v.toLocaleString()}, grid:{color:gC},
+        title:{display:true,text:'Inversión ($)',color:'#9DB4F5',font:{size:10}} },
+      yDep:{ position:'right', ticks:{color:'#16a34a', font:{size:11}}, grid:{display:false},
+        title:{display:true,text:'Depósitos',color:'#16a34a',font:{size:10}}, min:40, max:80 },
+      yCPD:{ display:false, min:60, max:140 }
+    }
+  }
+});
+
+// CPD chart
+new Chart(document.getElementById('cpdChart'), {
+  type:'bar',
+  data:{
+    labels:['Sem 1','Sem 2','Sem 3'],
+    datasets:[{
+      label:'CPD ($)',
+      data: cpd,
+      backgroundColor:['#86EFAC','#FCA5A5','#4ADE80'],
+      borderRadius:6, barPercentage:0.55
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false}, tooltip:{callbacks:{label:ctx=>'$'+ctx.parsed.y.toFixed(2)}} },
+    scales:{
+      x:{ ticks:{color:tC, font:{size:11}}, grid:{display:false} },
+      y:{ min:60, max:130, ticks:{color:tC, font:{size:11}, callback:v=>'$'+v}, grid:{color:gC} }
+    }
+  }
+});
+
+// Daily investment chart
+const dailyLabels = [
+  '1/3','2/3','3/3','4/3','5/3','6/3','7/3',
+  '8/3','9/3','10/3','11/3','12/3','13/3','14/3',
+  '15/3','16/3','17/3','18/3','19/3','20/3','21/3',
+  '22/3','23/3'
+];
+const dailyData = [
+  472.24, 421.43, 483.71, 478.64, 503.67, 888.37, 911.37,
+  1037.60, 887.13, 1012.91, 1129.31, 935.82, 897.43, 902.15,
+  1023.81, 1158.66, 950.64, 934.34, 836.30, 692.64, 762.93,
+  996.62, 845.18
+];
+const bgColors = dailyData.map((v,i) => {
+  if(i<7) return 'rgba(27,79,216,0.35)';
+  if(i<14) return 'rgba(27,79,216,0.65)';
+  if(i<21) return 'rgba(27,79,216,0.9)';
+  return 'rgba(201,168,76,0.7)';
+});
+
+new Chart(document.getElementById('dailyChart'), {
+  type:'bar',
+  data:{
+    labels: dailyLabels,
+    datasets:[{ label:'Inversión diaria', data: dailyData, backgroundColor: bgColors, borderRadius:3, barPercentage:0.8 }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false}, tooltip:{callbacks:{label:ctx=>'$'+ctx.parsed.y.toFixed(0)}} },
+    scales:{
+      x:{ ticks:{color:tC, font:{size:9}, maxRotation:45, autoSkip:false}, grid:{display:false} },
+      y:{ ticks:{color:tC, font:{size:10}, callback:v=>'$'+v}, grid:{color:gC} }
+    }
+  }
+});
+</script>
+</body>
+</html>
