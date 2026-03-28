@@ -525,14 +525,17 @@ let DP = { start:null, end:null, selecting:null, viewStart:new Date(), viewEnd:n
 // Dates come as M/D/YYYY or M/D/YYYY H:MM:SS from Sheets
 function parseSheetDate(v) {
   if (!v || v.trim() === '') return null;
-  // Try M/D/YYYY first
-  const m = v.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  const s = v.trim();
+  // Sheets publishes M/D/YYYY or M/D/YYYY H:MM:SS (month first)
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
   if (m) {
-    const d = new Date(parseInt(m[3]), parseInt(m[1])-1, parseInt(m[2]));
+    const month = parseInt(m[1]) - 1; // m[1]=month, m[2]=day, m[3]=year
+    const day   = parseInt(m[2]);
+    const year  = parseInt(m[3]);
+    const d = new Date(year, month, day);
     return isNaN(d.getTime()) ? null : d;
   }
-  // Fallback
-  const d = new Date(v);
+  const d = new Date(s);
   return isNaN(d.getTime()) ? null : d;
 }
 
@@ -564,7 +567,30 @@ function ymToDate(ym) {
 
 function toNum(v) {
   if (!v || v==='' || v==='-') return 0;
-  return parseFloat(v.replace(/[$,]/g,'')) || 0;
+  let s = v.replace(/[$]/g,'').trim();
+  // Handle both 1.234,56 (es-CO) and 1,234.56 (en-US) formats
+  if (s.match(/^-?[\d.,]+$/)) {
+    const commas = (s.match(/,/g)||[]).length;
+    const dots   = (s.match(/\./g)||[]).length;
+    if (commas===1 && dots===0) {
+      // Could be decimal comma (e.g. 8511,53) or thousands (1,234)
+      const parts = s.split(',');
+      if (parts[1].length<=2) s = s.replace(',','.');  // decimal comma
+      else s = s.replace(',','');                        // thousands
+    } else if (dots===1 && commas===0) {
+      // standard decimal point - fine as-is
+    } else if (commas>0 && dots>0) {
+      // 1.234,56 or 1,234.56 - figure out which is decimal
+      if (s.lastIndexOf(',') > s.lastIndexOf('.')) {
+        s = s.replace(/\./g,'').replace(',','.');  // 1.234,56 → 1234.56
+      } else {
+        s = s.replace(/,/g,'');                     // 1,234.56 → 1234.56
+      }
+    } else {
+      s = s.replace(/[,.]/g,'');
+    }
+  }
+  return parseFloat(s) || 0;
 }
 function fmtUSD(v) { return '$'+Math.round(v).toLocaleString('en-US'); }
 function fmtNum(v) { return Math.round(v).toLocaleString('en-US'); }
