@@ -121,6 +121,14 @@ body{background:var(--body-bg);color:var(--text);font-family:'Barlow',sans-serif
 .trend-down{color:#DC2626;font-size:9px;margin-left:3px;}
 .trend-neu{color:#9CA3AF;font-size:9px;margin-left:3px;}
 
+.cifras-table tfoot td{
+  font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;
+  text-transform:uppercase;padding:10px 12px;background:#000;color:var(--lime);
+  text-align:center;border-right:1px solid #222;
+}
+.cifras-table tfoot td:first-child{text-align:left;}
+.ftd-no-data{color:var(--text-xs);font-weight:400;font-size:11px;}
+
 /* PAIR GRID */
 .pair-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;}
 .pair-card{background:var(--card-bg);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;}
@@ -295,7 +303,30 @@ body{background:var(--body-bg);color:var(--text);font-family:'Barlow',sans-serif
   </div>
 </div>
 
-<div class="page" id="page-ftd"><div class="main"><p style="color:var(--text-dim);padding:60px 0;text-align:center;font-family:'Barlow Condensed';letter-spacing:3px;font-size:13px;">PRÓXIMAMENTE</p></div></div>
+<!-- PAGE: FTD -->
+<div class="page" id="page-ftd">
+  <div class="main">
+    <div class="section-title">Evolución Registros → FTD — Histórico Completo</div>
+    <div class="cifras-wrap" style="overflow-x:auto;">
+      <table class="cifras-table" id="ftdEvoTable">
+        <thead>
+          <tr>
+            <th style="text-align:left;min-width:110px;">Mes</th>
+            <th>Registros</th>
+            <th>FTDs</th>
+            <th>Conversión %</th>
+            <th>Inv. Registro</th>
+            <th>Meta Ads</th>
+            <th>Programática</th>
+            <th>Costo / FTD</th>
+          </tr>
+        </thead>
+        <tbody id="ftdEvoBody"></tbody>
+        <tfoot id="ftdEvoFoot"></tfoot>
+      </table>
+    </div>
+  </div>
+</div>
 <div class="page" id="page-stake"><div class="main"><p style="color:var(--text-dim);padding:60px 0;text-align:center;font-family:'Barlow Condensed';letter-spacing:3px;font-size:13px;">PRÓXIMAMENTE</p></div></div>
 <div class="page" id="page-awareness"><div class="main"><p style="color:var(--text-dim);padding:60px 0;text-align:center;font-family:'Barlow Condensed';letter-spacing:3px;font-size:13px;">PRÓXIMAMENTE</p></div></div>
 
@@ -463,6 +494,9 @@ function applyFilters() {
   const txF  = DATA.transacciones.filter(r => inRange(parseDate(r['Created At'])));
   const ldF  = DATA.listaDepositos.filter(r => inRange(parseDate(r['Date'])));
   renderResumen(rgF, regF, ftdF, txF, ldF);
+  // Cifras Generales y FTD siempre usan histórico completo, sin filtro de fecha
+  renderCifrasHistorico();
+  renderFTDPage();
   renderProductos();
 }
 
@@ -478,8 +512,56 @@ function cOpts(extra) {
   }, extra||{});
 }
 
-// ── RENDER CIFRAS GENERALES TABLE ──────────────────────────
-function renderCifrasGenerales(regByYM, ftdByYM, txByYM, ldByYM, allYMs) {
+// ── RENDER CIFRAS GENERALES — siempre histórico completo ───
+function renderCifrasHistorico() {
+  if (!DATA.todosUsuarios.length && !DATA.transacciones.length) return;
+
+  // Build aggregations from ALL data (no date filter)
+  const regByYM = {};
+  DATA.todosUsuarios.forEach(r => {
+    const ym = toYM(parseDate(r['creation_date_utc']));
+    if(ym) { if(!regByYM[ym]) regByYM[ym]=new Set(); regByYM[ym].add(r['User ID']); }
+  });
+
+  const ftdByYM = {};
+  DATA.todosUsuarios.forEach(r => {
+    const ym = toYM(parseDate(r['FTD']));
+    if(ym) {
+      if(!ftdByYM[ym]) ftdByYM[ym]={count:0,income:0};
+      ftdByYM[ym].count++;
+      ftdByYM[ym].income += parseNum(r['Income FTD']);
+    }
+  });
+
+  const txByYM = {};
+  DATA.transacciones.forEach(r => {
+    const ym = toYM(parseDate(r['Created At']));
+    if(!ym) return;
+    if(!txByYM[ym]) txByYM[ym]={users:new Set(),stake:0,win:0,ggr:0};
+    txByYM[ym].users.add(r['User ID']);
+    txByYM[ym].stake += parseNum(r['Outcome']);
+    txByYM[ym].win   += parseNum(r['Income']);
+    txByYM[ym].ggr   += parseNum(r['Total']);
+  });
+
+  const ldByYM = {};
+  DATA.listaDepositos.forEach(r => {
+    const dateVal = r['Date'] || r['Fecha'] || r['date'] || '';
+    const amtVal  = r['Amount'] || r['amount'] || r['Monto'] || r['Total'] || r['total'] || '';
+    const ym = toYM(parseDate(dateVal));
+    if(!ym) return;
+    if(!ldByYM[ym]) ldByYM[ym]={amount:0,count:0};
+    ldByYM[ym].amount += parseNum(amtVal);
+    ldByYM[ym].count++;
+  });
+
+  const allYMSet = new Set([
+    ...Object.keys(regByYM).map(Number),
+    ...Object.keys(ftdByYM).map(Number),
+    ...Object.keys(txByYM).map(Number),
+  ]);
+  const allYMs = [...allYMSet].sort();
+
   // Build header
   const headerRow = document.getElementById('cifrasHeader');
   let hHTML = '<th>Concepto</th>';
@@ -487,68 +569,18 @@ function renderCifrasGenerales(regByYM, ftdByYM, txByYM, ldByYM, allYMs) {
   hHTML += '<th>Total</th>';
   headerRow.innerHTML = hHTML;
 
-  // Define rows
   const rows = [
-    {
-      label: 'Nuevos Registros',
-      vals: allYMs.map(ym => regByYM[ym] ? regByYM[ym].size : 0),
-      total: (vals) => vals.reduce((a,b)=>a+b,0),
-      fmt: fmtNum,
-      sumable: true
-    },
-    {
-      label: 'Usuarios Activos',
-      vals: allYMs.map(ym => txByYM[ym] ? txByYM[ym].users.size : 0),
-      total: null, // no sum for activos
-      fmt: fmtNum,
-      sumable: false
-    },
-    {
-      label: 'Primeros Depósitos (FTDs)',
-      vals: allYMs.map(ym => ftdByYM[ym] ? ftdByYM[ym].count : 0),
-      total: (vals) => vals.reduce((a,b)=>a+b,0),
-      fmt: fmtNum,
-      sumable: true
-    },
-    {
-      label: 'Depósitos USD$',
-      vals: allYMs.map(ym => ldByYM[ym] ? ldByYM[ym].amount : 0),
-      total: (vals) => vals.reduce((a,b)=>a+b,0),
-      fmt: fmtUSD,
-      sumable: true
-    },
-    {
-      label: 'Total Apuestas (Stake) USD$',
-      vals: allYMs.map(ym => txByYM[ym] ? txByYM[ym].stake : 0),
-      total: (vals) => vals.reduce((a,b)=>a+b,0),
-      fmt: fmtUSD,
-      sumable: true
-    },
-    {
-      label: 'Win Total USD$',
-      vals: allYMs.map(ym => txByYM[ym] ? txByYM[ym].win : 0),
-      total: (vals) => vals.reduce((a,b)=>a+b,0),
-      fmt: fmtUSD,
-      sumable: true
-    },
-    {
-      label: 'GGR Total USD$',
-      vals: allYMs.map(ym => txByYM[ym] ? Math.abs(txByYM[ym].ggr) : 0),
-      total: (vals) => vals.reduce((a,b)=>a+b,0),
-      fmt: fmtUSD,
-      sumable: true
-    },
-    {
-      label: 'Conv. Reg → FTD',
-      vals: allYMs.map(ym => {
-        const r = regByYM[ym] ? regByYM[ym].size : 0;
-        const f = ftdByYM[ym] ? ftdByYM[ym].count : 0;
-        return r > 0 ? (f/r*100) : 0;
-      }),
-      total: null,
-      fmt: fmtPct,
-      sumable: false
-    }
+    { label:'Nuevos Registros',         vals:allYMs.map(ym=>regByYM[ym]?regByYM[ym].size:0),              fmt:fmtNum, sumable:true },
+    { label:'Usuarios Activos',          vals:allYMs.map(ym=>txByYM[ym]?txByYM[ym].users.size:0),          fmt:fmtNum, sumable:false },
+    { label:'Primeros Depósitos (FTDs)', vals:allYMs.map(ym=>ftdByYM[ym]?ftdByYM[ym].count:0),             fmt:fmtNum, sumable:true },
+    { label:'Depósitos USD$',            vals:allYMs.map(ym=>ldByYM[ym]?ldByYM[ym].amount:0),              fmt:fmtUSD, sumable:true },
+    { label:'Stake USD$',               vals:allYMs.map(ym=>txByYM[ym]?txByYM[ym].stake:0),               fmt:fmtUSD, sumable:true },
+    { label:'Win Total USD$',            vals:allYMs.map(ym=>txByYM[ym]?txByYM[ym].win:0),                 fmt:fmtUSD, sumable:true },
+    { label:'GGR Total USD$',            vals:allYMs.map(ym=>txByYM[ym]?Math.abs(txByYM[ym].ggr):0),       fmt:fmtUSD, sumable:true },
+    { label:'Conv. Reg → FTD',           vals:allYMs.map(ym=>{
+        const r=regByYM[ym]?regByYM[ym].size:0, f=ftdByYM[ym]?ftdByYM[ym].count:0;
+        return r>0?(f/r*100):0;
+      }), fmt:fmtPct, sumable:false },
   ];
 
   const tbody = document.getElementById('cifrasBody');
@@ -560,16 +592,98 @@ function renderCifrasGenerales(regByYM, ftdByYM, txByYM, ldByYM, allYMs) {
       const prev = i > 0 ? row.vals[i-1] : null;
       bodyHTML += `<td class="val">${row.fmt(val)}${trendHTML(val, prev)}</td>`;
     });
-    // Total column
-    if (row.sumable && row.total) {
-      const t = row.total(row.vals);
-      bodyHTML += `<td class="val total-col">${row.fmt(t)}</td>`;
-    } else {
-      bodyHTML += `<td class="val total-col">—</td>`;
-    }
+    const t = row.sumable ? row.vals.reduce((a,b)=>a+b,0) : null;
+    bodyHTML += `<td class="val total-col">${t!==null ? row.fmt(t) : '—'}</td>`;
     bodyHTML += '</tr>';
   });
   tbody.innerHTML = bodyHTML;
+}
+
+// ── RENDER FTD PAGE — siempre histórico completo ───────────
+function renderFTDPage() {
+  if (!DATA.todosUsuarios.length) return;
+
+  // Registros por mes (histórico completo)
+  const regByYM = {};
+  DATA.todosUsuarios.forEach(r => {
+    const ym = toYM(parseDate(r['creation_date_utc']));
+    if(ym) { if(!regByYM[ym]) regByYM[ym]=new Set(); regByYM[ym].add(r['User ID']); }
+  });
+
+  // FTDs por mes (histórico completo)
+  const ftdByYM = {};
+  DATA.todosUsuarios.forEach(r => {
+    const ym = toYM(parseDate(r['FTD']));
+    if(ym) {
+      if(!ftdByYM[ym]) ftdByYM[ym]=0;
+      ftdByYM[ym]++;
+    }
+  });
+
+  // Inversión de Registro por mes y medio (histórico completo)
+  const invRegByYM = {};
+  DATA.resumenGeneral.forEach(r => {
+    if (r['Etapa'] !== 'Registro') return;
+    const ym = toYM(parseDate(r['Date']));
+    if(!ym) return;
+    if(!invRegByYM[ym]) invRegByYM[ym]={total:0,meta:0,pg:0};
+    const amt = parseNum(r['Amount Spent']);
+    invRegByYM[ym].total += amt;
+    if(r['Medio']==='Meta')          invRegByYM[ym].meta += amt;
+    if(r['Medio']==='Programatica')  invRegByYM[ym].pg   += amt;
+  });
+
+  // All months
+  const allYMSet = new Set([
+    ...Object.keys(regByYM).map(Number),
+    ...Object.keys(ftdByYM).map(Number),
+  ]);
+  const allYMs = [...allYMSet].sort();
+
+  // Totals
+  let totReg=0, totFTD=0, totInv=0, totMeta=0, totPG=0;
+
+  let bodyHTML = '';
+  allYMs.forEach((ym, i) => {
+    const reg   = regByYM[ym] ? regByYM[ym].size : 0;
+    const ftd   = ftdByYM[ym] || 0;
+    const conv  = reg > 0 ? (ftd/reg*100) : 0;
+    const inv   = invRegByYM[ym] ? invRegByYM[ym].total : 0;
+    const meta  = invRegByYM[ym] ? invRegByYM[ym].meta  : 0;
+    const pg    = invRegByYM[ym] ? invRegByYM[ym].pg    : 0;
+    const cpftd = (inv > 0 && ftd > 0) ? (inv/ftd) : null;
+
+    const prevReg  = i>0 && regByYM[allYMs[i-1]] ? regByYM[allYMs[i-1]].size : null;
+    const prevFTD  = i>0 ? (ftdByYM[allYMs[i-1]]||null) : null;
+    const prevConv = (i>0 && prevReg&&prevReg>0) ? ((prevFTD||0)/prevReg*100) : null;
+
+    totReg+=reg; totFTD+=ftd; totInv+=inv; totMeta+=meta; totPG+=pg;
+
+    bodyHTML += `<tr>
+      <td style="font-family:'Barlow Condensed';font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);background:#FAFAFA;border-right:2px solid var(--border);">${fmtYM(ym)}</td>
+      <td class="val">${fmtNum(reg)}${trendHTML(reg,prevReg)}</td>
+      <td class="val">${fmtNum(ftd)}${trendHTML(ftd,prevFTD)}</td>
+      <td class="val">${fmtPct(conv)}${trendHTML(conv,prevConv)}</td>
+      <td class="val">${inv>0 ? fmtUSD(inv) : '<span class="ftd-no-data">—</span>'}</td>
+      <td class="val">${meta>0 ? fmtUSD(meta) : '<span class="ftd-no-data">—</span>'}</td>
+      <td class="val">${pg>0 ? fmtUSD(pg) : '<span class="ftd-no-data">—</span>'}</td>
+      <td class="val">${cpftd!==null ? '<strong>'+fmtUSD(cpftd)+'</strong>' : '<span class="ftd-no-data">—</span>'}</td>
+    </tr>`;
+  });
+  document.getElementById('ftdEvoBody').innerHTML = bodyHTML;
+
+  const totConv   = totReg>0 ? (totFTD/totReg*100) : 0;
+  const totCPFTD  = (totInv>0 && totFTD>0) ? fmtUSD(totInv/totFTD) : '—';
+  document.getElementById('ftdEvoFoot').innerHTML = `<tr>
+    <td>Total</td>
+    <td>${fmtNum(totReg)}</td>
+    <td>${fmtNum(totFTD)}</td>
+    <td>${fmtPct(totConv)}</td>
+    <td>${totInv>0?fmtUSD(totInv):'—'}</td>
+    <td>${totMeta>0?fmtUSD(totMeta):'—'}</td>
+    <td>${totPG>0?fmtUSD(totPG):'—'}</td>
+    <td>${totCPFTD}</td>
+  </tr>`;
 }
 
 // ── RENDER RESUMEN ─────────────────────────────────────────
@@ -647,9 +761,6 @@ function renderResumen(rg, reg, ftd, tx, ld) {
     ...Object.keys(txByYM).map(Number),
   ]);
   const allYMs = [...allYMSet].sort();
-
-  // ── Render Cifras Generales ─────────────────────────────
-  renderCifrasGenerales(regByYM, ftdByYM, txByYM, ldByYM, allYMs);
 
   // ── Charts ─────────────────────────────────────────────
   const regYMs = Object.keys(regByYM).map(Number).sort();
